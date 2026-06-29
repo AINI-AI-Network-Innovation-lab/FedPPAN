@@ -1,185 +1,183 @@
-# Huong Dan Chay Cac Thuat Toan
+# Huong Dan Chay FL Privacy Bench
 
-Tai lieu nay huong dan chay cac pipeline trong repo `FedPPAN`:
-- `DP/fl`: Federated Learning + Gaussian Differential Privacy tren model update
-- `PPAN_FL`: Federated Learning + privacy mechanism kieu PPAN
-- `Local_Differential_Privacy`: Federated Learning + adaptive local DP
-- `CVB_FL`: Federated Learning + Convolutional Variational Bottleneck (CVB)
-- `DCS2_FL`: Federated Learning + Defense by Concealing Sensitive Samples (DCS2)
+Tai lieu nay mo ta cach chay cac baseline sau refactor. Source chinh nam trong package chung `fl_privacy_bench/`.
 
-## 1) Yeu cau moi truong
+Tai lieu lien quan:
 
-- Python: khuyen nghi `3.10` hoac `3.11`
-- CUDA (tuy chon): neu co GPU
-- He dieu hanh: Windows/Linux deu duoc (lenh duoi day dung theo terminal Python thong thuong)
+- `docs/BASELINES.md`: mo ta tung baseline
+- `docs/CONFIG.md`: config chung va config rieng
+- `docs/CODE_STRUCTURE.md`: cau truc source code va cach mo rong
 
-Thu vien can co (toi thieu):
-- `torch`, `torchvision`
-- `flwr`
-- `flwr-datasets`
-- `numpy`
-- `scikit-learn`
-- `Pillow`
-
-## 2) Cai dat nhanh
+## 1) Cai dat
 
 ```bash
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-# source .venv/bin/activate
-
+source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install torch torchvision flwr flwr-datasets numpy scikit-learn pillow
+python -m pip install -r requirements.txt
 ```
 
-## 3) Cau truc chay
+Neu khong cai duoc `quadprog`, DCS2 van co fallback closed-form cho truong hop constraint don.
 
-Tat ca pipeline deu co entrypoint rieng:
-- `DP/fl/main.py`
-- `PPAN_FL/main.py`
-- `Local_Differential_Privacy/main.py`
-- `CVB_FL/main.py`
-- `DCS2_FL/main.py`
+## 2) Protocol mac dinh
 
-Chay tu thu muc goc repo `FedPPAN`.
+Fashion-MNIST baseline:
 
-## 4) Cach chay tung thuat toan
+- `NUM_CLIENTS=100`
+- `CLIENTS_PER_ROUND=10`
+- `NUM_ROUNDS=200`
+- `BATCH_SIZE=16`
+- `LEARNING_RATE=0.01`
 
-### 4.1 DP (Gaussian noise tren tham so model)
+CIFAR-10 baseline:
+
+- `NUM_CLIENTS=50`
+- `CLIENTS_PER_ROUND=10`
+- `NUM_ROUNDS=500`
+- `BATCH_SIZE=16`
+- `LEARNING_RATE=0.03`
+
+Entrypoint chung:
 
 ```bash
-python DP/fl/main.py
+python -m fl_privacy_bench.main --algo <algo> [baseline flags]
 ```
 
-Config tai:
-- `DP/fl/config.py`
+`--algo` ho tro: `cvb_fl`, `dcs2_fl`, `dp_fl`, `ppan_fl`, `ldp_fed`.
 
-Thong so chinh:
-- `NUM_CLIENTS`, `NUM_ROUNDS`, `BATCH_SIZE`, `LEARNING_RATE`
-- `eplison`, `delta`, `sensitivity`
-
-Ket qua:
-- Thu muc `results/`
-
-### 4.2 PPAN_FL
+Moi baseline deu co cac flag chung:
 
 ```bash
-python PPAN_FL/main.py
+--dataset fashion|cifar
+--seed 42
+--num-rounds N
+--num-clients N
+--clients-per-round N
+--batch-size N
+--learning-rate LR
+--alpha-dirichlet A
+--skip-protocol-check
 ```
 
-Config tai:
-- `PPAN_FL/config.py`
+Mac dinh protocol check se bat loi neu baseline full-run bi lech. Khi smoke test voi `--num-rounds`, check so round duoc nới ra.
 
-Thong so chinh:
-- `PRIVACY_WEIGHT` (list)
-- `NUM_CLIENTS`, `NUM_ROUNDS`, `BATCH_SIZE`, `LEARNING_RATE`, `NOISE_SCALE`
-
-Ket qua:
-- Thu muc `results/`
-
-### 4.3 Local_Differential_Privacy
+## 3) Chay smoke test
 
 ```bash
-python Local_Differential_Privacy/main.py
+python -m fl_privacy_bench.main --algo cvb_fl --dataset fashion --seed 1 --num-rounds 1
+python -m fl_privacy_bench.main --algo dcs2_fl --dataset fashion --seed 1 --num-rounds 1
+python -m fl_privacy_bench.main --algo dp_fl --dataset fashion --seed 1 --num-rounds 1
+python -m fl_privacy_bench.main --algo ppan_fl --dataset fashion --seed 1 --num-rounds 1 --privacy-weights 1
+python -m fl_privacy_bench.main --algo ldp_fed --dataset fashion --profile baseline --seed 1 --num-rounds 1
 ```
 
-Config tai:
-- `Local_Differential_Privacy/config.py`
+## 4) Chay tung baseline
 
-Thong so chinh:
-- `INITIAL_EPSILON`, `TARGET_ACCT`, `ADJUST_RATE`, `NOISE_CLIP`, `WINDOW_SIZE`
-- `NUM_CLIENTS`, `NUM_ROUNDS`, `BATCH_SIZE`, `LEARNING_RATE`
-
-### 4.4 CVB_FL (pipeline moi)
+### DP
 
 ```bash
-python CVB_FL/main.py --dataset fashion --seed 42
-python CVB_FL/main.py --dataset cifar --seed 42
+python -m fl_privacy_bench.main --algo dp_fl --dataset fashion --seed 42
+python -m fl_privacy_bench.main --algo dp_fl --dataset cifar --seed 42
 ```
 
-Config tai:
-- `CVB_FL/config.py`
-
-Thong so CVB mac dinh theo paper:
-- `CVB_POSITION=1`
-- `CVB_KERNEL_SIZE=5`
-- `CVB_SCALE=0.5`
-- `CVB_BETA=0.1`
-
-Ket qua:
-- `results/cvb_fl/<dataset>/seed_<seed>/`
-
-### 4.5 DCS2_FL (pipeline moi)
+Flag rieng:
 
 ```bash
-python DCS2_FL/main.py --dataset fashion --seed 42
-python DCS2_FL/main.py --dataset cifar --seed 42
+--epsilon 0.1
+--delta 1e-5
+--sensitivity 0.01
+--max-grad-norm 1.0
+--max-param-abs 10.0
 ```
 
-Config tai:
-- `DCS2_FL/config.py`
-
-Thong so DCS2 chinh:
-- `DCS2_LAMBDA_G=0.7`
-- `DCS2_LAMBDA_X`, `DCS2_LAMBDA_Z`, `DCS2_EPSILON`
-- `DCS2_SYNTH_STEPS`, `DCS2_SYNTH_LR`
-- `DCS2_INIT_MODE` (`random`)
-
-Ket qua:
-- `results/dcs2_fl/<dataset>/seed_<seed>/`
-
-### 4.6 Protocol baseline IWQoS
-
-CVB_FL va DCS2_FL da duoc dong bo protocol:
-- Fashion-MNIST: `NUM_CLIENTS=100`, `CLIENTS_PER_ROUND=10`, `NUM_ROUNDS=200`, `LR=0.01`
-- CIFAR-10: `NUM_CLIENTS=50`, `CLIENTS_PER_ROUND=10`, `NUM_ROUNDS=500`, `LR=0.03`
-
-Metric leakage chinh cho baseline:
-- `privacy_leakage_iwqos` (MMSE-based MI lower bound)
-
-## 5) Tong hop ket qua baseline (mean +- std)
-
-Sau khi chay nhieu seed, tong hop bang:
+### PPAN
 
 ```bash
-python tools/summarize_baselines.py --algos cvb_fl dcs2_fl --datasets fashion cifar
+python -m fl_privacy_bench.main --algo ppan_fl --dataset fashion --seed 42 --privacy-weights 500,200,100,10,1,0.1
+python -m fl_privacy_bench.main --algo ppan_fl --dataset cifar --seed 42 --privacy-weights 1
 ```
 
-## 6) Chay nhanh de smoke test
+Flag rieng:
 
-Khong sua config. Dung override:
-- `--num-rounds 1` hoac `2`
-
-Vi du:
 ```bash
-python CVB_FL/main.py --dataset fashion --seed 1 --num-rounds 1
-python DCS2_FL/main.py --dataset cifar --seed 1 --num-rounds 1
+--privacy-weights 500,200,100,10,1,0.1,0.01,0.001
+--noise-scale 0.01
+--max-privacy-weight 1.0
+--max-privacy-loss 1.0
+--distortion-weight 0.01
 ```
 
-## 7) Kiem tra va debug co ban
+### LDP-Fed
 
-### 6.1 Loi import/module
-- Dam bao dang chay tai thu muc goc repo.
-- Dam bao da cai du `flwr`, `flwr-datasets`, `torchvision`.
+```bash
+python -m fl_privacy_bench.main --algo ldp_fed --dataset fashion --profile auto --seed 42
+python -m fl_privacy_bench.main --algo ldp_fed --dataset fashion --profile baseline --seed 42
+python -m fl_privacy_bench.main --algo ldp_fed --dataset cifar --profile baseline --seed 42
+```
 
-### 6.2 Loi tai dataset
-- Lan dau se tu dong download dataset (can internet).
-- Neu bi gian doan mang, chay lai lenh.
+`--profile auto` tren Fashion-MNIST dung setup paper: `50` clients, `9` clients/round, `80` rounds, model `LDPFedFashionNet`. De dong bo voi baseline khac, dung `--profile baseline`.
 
-### 6.3 Chay qua cham/het RAM
-- Giam `NUM_CLIENTS`
-- Giam `BATCH_SIZE`
-- Giam `num_gpus` trong `start_simulation(...)` neu can
+Flag rieng:
 
-## 8) Thu tu de xac nhan repo hoat dong
+```bash
+--cycles 5
+--alpha 1.0
+--rho 4
+--clip-c 0.1
+--local-epochs 1
+--disable-sampling-amplification
+```
 
-Nen chay theo thu tu:
-1. `CVB_FL/main.py` voi 1-2 rounds (xac nhan pipeline moi)
-2. `DCS2_FL/main.py` voi 1-2 rounds
-3. `DP/fl/main.py` voi 1-2 rounds
-4. `PPAN_FL/main.py` voi 1-2 rounds
-5. `Local_Differential_Privacy/main.py` voi 1-2 rounds
+### CVB
 
-Neu cac pipeline deu chay duoc voi smoke test, tang len full config de train chinh thuc.
+```bash
+python -m fl_privacy_bench.main --algo cvb_fl --dataset fashion --seed 42
+python -m fl_privacy_bench.main --algo cvb_fl --dataset cifar --seed 42
+```
+
+Tham so CVB nam trong `fl_privacy_bench/baselines/cvb_config.py`.
+
+### DCS2
+
+```bash
+python -m fl_privacy_bench.main --algo dcs2_fl --dataset fashion --seed 42
+python -m fl_privacy_bench.main --algo dcs2_fl --dataset cifar --seed 42
+```
+
+Tham so DCS2 nam trong `fl_privacy_bench/baselines/dcs2_config.py`.
+
+## 5) Output
+
+Output chuan:
+
+```text
+results/<dataset>/seed_<seed>/
+```
+
+Moi baseline ghi vao cung folder dataset/seed. Ten file metric co prefix algorithm/profile de khong ghi de nhau, vi du:
+
+```text
+results/fashion/seed_42/cvb_fl_centralized_accuracy.txt
+results/fashion/seed_42/dcs2_fl_privacy_leakage.txt
+results/fashion/seed_42/dp_fl_epsilon_0p1_distortion.txt
+results/fashion/seed_42/ppan_fl_privacy_1_centralized_loss.txt
+results/fashion/seed_42/ldp_fed_paper_alpha_round.txt
+```
+
+Metric chung theo tung prefix:
+
+- `<prefix>_centralized_accuracy.txt`
+- `<prefix>_centralized_loss.txt`
+- `<prefix>_privacy_leakage.txt`
+- `<prefix>_distortion.txt`
+
+Metric rieng:
+
+- DCS2: `<prefix>_conceal_obj.txt`, `<prefix>_proj_applied_ratio.txt`
+- LDP-Fed: `<prefix>_alpha_round.txt`, `<prefix>_alpha_per_param.txt`, `<prefix>_selected_layer_idx.txt`
+
+## 6) Tong hop ket qua
+
+```bash
+python -m fl_privacy_bench.tools.summarize_baselines --algos cvb_fl dcs2_fl dp_fl ppan_fl ldp_fed --datasets fashion cifar
+```

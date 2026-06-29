@@ -1,0 +1,8 @@
+torch
+torchvision
+flwr
+flwr-datasets
+numpy
+scikit-learn
+Pillow
+quadprog

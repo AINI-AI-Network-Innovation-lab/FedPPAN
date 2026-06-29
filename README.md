@@ -1,4 +1,4 @@
-# FL Privacy Bench
+# FedPPAN
 
 Federated learning baselines for privacy-preserving image classification on Fashion-MNIST and CIFAR-10.
 
